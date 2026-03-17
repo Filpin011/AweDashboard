@@ -24,7 +24,7 @@ function PageHeaderHeading({
     <h1
       className={cn(
         "max-w-2xl text-4xl font-bold tracking-tight text-balance lg:leading-[1.1] xl:text-6xl xl:tracking-tighter",
-        "bg-gradient-to-br from-violet-600 via-blue-600 to-cyan-500 bg-clip-text text-transparent",
+        "text-slate-900",
         className
       )}
       {...props}
