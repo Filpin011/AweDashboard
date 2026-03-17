@@ -37,14 +37,53 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        {/* Background gradient */}
         <div
           style={{
             position: "fixed",
             inset: 0,
             zIndex: -1,
-            background: "linear-gradient(135deg, #e0e7ff 0%, #f0fdfa 100%)",
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
+            background: "linear-gradient(135deg, #ede9fe 0%, #dbeafe 40%, #cffafe 70%, #d1fae5 100%)",
+          }}
+        />
+        {/* Decorative blobs */}
+        <div
+          style={{
+            position: "fixed",
+            top: "-120px",
+            left: "-120px",
+            width: "500px",
+            height: "500px",
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(167,139,250,0.35) 0%, transparent 70%)",
+            zIndex: -1,
+            filter: "blur(40px)",
+          }}
+        />
+        <div
+          style={{
+            position: "fixed",
+            bottom: "-150px",
+            right: "-100px",
+            width: "550px",
+            height: "550px",
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(56,189,248,0.30) 0%, transparent 70%)",
+            zIndex: -1,
+            filter: "blur(50px)",
+          }}
+        />
+        <div
+          style={{
+            position: "fixed",
+            top: "40%",
+            left: "55%",
+            width: "400px",
+            height: "400px",
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(110,231,183,0.25) 0%, transparent 70%)",
+            zIndex: -1,
+            filter: "blur(40px)",
           }}
         />
         <PageHeader>

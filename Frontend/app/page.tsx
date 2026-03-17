@@ -114,45 +114,53 @@ export default function Home() {
     //   </footer>
     // </div>
     <>
-      <div className="container-wrapper section-soft flex flex-1 flex-col pb-6">
-        <div className="theme-container container flex flex-1 flex-col">
-          <div className="md:grids-col-2 grid md:gap-4  xl:gap-4">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-             <Card className=" transition-transform duration-300 hover:-translate-y-2 hover:shadow-lg hover:cursor-pointer border-dashed border-2 border-gray-300 ">
+      <div className="container-wrapper flex flex-1 flex-col pb-8">
+        <div className="container flex flex-1 flex-col">
+          <div className="grid">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3">
+              {/* Add new site card */}
+              <Card className="group transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_8px_32px_rgba(99,102,241,0.18)] hover:cursor-pointer border-dashed border-2 border-violet-200/80 bg-white/40 hover:bg-white/60">
                 <CardHeader>
-                  <div className="flex columns-2 items-center gap-2">
-                    <div className="bg-gray-200 rounded-full  flex items-center justify-center">
-                      <PlusIcon className="text-xl text-gray-500" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-100 to-blue-100 border border-violet-200/60 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
+                      <PlusIcon className="w-5 h-5 text-violet-500" />
                     </div>
                     <div>
-                      <CardTitle>Add new site</CardTitle>
-                      <CardDescription>Click to create a new site entry</CardDescription>
+                      <CardTitle className="text-violet-700">Add new site</CardTitle>
+                      <CardDescription>Click to create a new entry</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
               </Card>
+
               {sites.map((site) => (
                 <Card
                   key={site.title}
-                  className="transition-transform duration-300 hover:-translate-y-2 hover:shadow-lg hover:cursor-pointer"
+                  className="group transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_8px_32px_rgba(99,102,241,0.18)] hover:cursor-pointer"
                 >
                   <CardHeader>
-                    <div className="flex columns-2 items-center gap-2">
-                      <Image src={site.base64} alt={site.title} width={25} height={25} />
-                      <div>
-                        <CardTitle>{site.title}</CardTitle>
-                        <CardDescription>{site.description}</CardDescription>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200/60 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300 overflow-hidden">
+                        <Image src={site.base64} alt={site.title} width={24} height={24} className="object-contain" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="truncate">{site.title}</CardTitle>
+                        <CardDescription className="truncate">{site.description}</CardDescription>
                       </div>
                     </div>
                     <CardAction>
-                      <a href={site.link} target="_blank" rel="noopener noreferrer">
+                      <a
+                        href={site.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center rounded-full bg-gradient-to-r from-violet-500 to-blue-500 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:from-violet-600 hover:to-blue-600 transition-all duration-200 whitespace-nowrap"
+                      >
                         {site.actionLabel}
                       </a>
                     </CardAction>
                   </CardHeader>
                 </Card>
               ))}
-              
             </div>
           </div>
         </div>
