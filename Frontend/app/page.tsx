@@ -141,7 +141,7 @@ export default function Home() {
                   <CardHeader>
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200/60 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300 overflow-hidden">
-                        <Image src={site.base64} alt={site.title} width={24} height={24} className="object-contain" />
+                        <Image alt={site.title} width={24} height={24} className="object-contain" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <CardTitle className="truncate">{site.title}</CardTitle>
