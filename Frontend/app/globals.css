@@ -120,6 +120,33 @@
     @apply bg-background text-foreground;
   }
 
+  @keyframes rainbow-flow {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  .rainbow-text {
+    background: linear-gradient(
+      90deg,
+      #ff0080,
+      #ff8c00,
+      #ffd700,
+      #00ff00,
+      #00bfff,
+      #8a2be2,
+      #ff0080
+    );
+    background-size: 200% 200%;
+    animation: rainbow-flow 4s ease infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.5));
+  }
 }
 
 @utility container-wrapper {

@@ -6,9 +6,10 @@ function PageHeader({
   ...props
 }: React.ComponentProps<"section">) {
   return (
-    <section className={cn("", className)} {...props}>
-      <div className="container-wrapper">
-        <div className="container flex flex-col items-center gap-3 py-10 text-center md:py-16 lg:py-20 xl:gap-5">
+    <section className={cn("relative overflow-hidden", className)} {...props}>
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-100/30 via-purple-100/30 to-pink-100/30" />
+      <div className="container-wrapper relative">
+        <div className="max-w-7xl mx-auto flex flex-col items-center gap-3 py-12 text-center md:py-16 lg:py-20 xl:gap-5">
           {children}
         </div>
       </div>
