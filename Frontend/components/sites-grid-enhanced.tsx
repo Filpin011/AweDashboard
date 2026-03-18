@@ -29,10 +29,27 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus as PlusIcon, GripVertical, X, ExternalLink, Globe, Search, Grid3x3, List, Tag } from "lucide-react";
+import {
+  Plus as PlusIcon,
+  GripVertical,
+  X,
+  ExternalLink,
+  Globe,
+  Search,
+  Grid3x3,
+  List,
+  Tag,
+  Star,
+  Download,
+  Upload,
+  LayoutGrid,
+  Layers,
+  Pencil,
+} from "lucide-react";
 import initialSites from "@/app/sites.json";
+import { SiteFormModal } from "./site-form-modal";
 
-interface Site {
+export interface Site {
   id: string;
   title: string;
   description: string;
@@ -40,9 +57,10 @@ interface Site {
   actionLabel?: string;
   favicon?: string;
   category?: string;
+  pinned?: boolean;
 }
 
-function getFaviconUrl(url: string): string {
+export function getFaviconUrl(url: string): string {
   try {
     const domain = new URL(url).hostname;
     return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
@@ -51,13 +69,46 @@ function getFaviconUrl(url: string): string {
   }
 }
 
+// ─── Stats Bar ────────────────────────────────────────────────────────────────
+function StatsBar({ sites }: { sites: Site[] }) {
+  const totalSites = sites.length;
+  const totalCategories = new Set(
+    sites.map((s) => s.category).filter(Boolean)
+  ).size;
+  const totalPinned = sites.filter((s) => s.pinned).length;
+
+  return (
+    <div className="flex flex-wrap gap-3 mb-6">
+      {[
+        { label: "Sites", value: totalSites, icon: <LayoutGrid className="w-4 h-4" /> },
+        { label: "Categories", value: totalCategories, icon: <Layers className="w-4 h-4" /> },
+        { label: "Favourites", value: totalPinned, icon: <Star className="w-4 h-4" /> },
+      ].map(({ label, value, icon }) => (
+        <div
+          key={label}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/80 border border-slate-200 shadow-sm backdrop-blur-sm"
+        >
+          <span className="text-blue-600">{icon}</span>
+          <span className="text-sm font-semibold text-slate-800">{value}</span>
+          <span className="text-xs text-slate-500">{label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Site Card ────────────────────────────────────────────────────────────────
 function SiteCard({
   site,
   onRemove,
+  onTogglePin,
+  onEdit,
   viewMode,
 }: {
   site: Site;
   onRemove: (id: string) => void;
+  onTogglePin: (id: string) => void;
+  onEdit: (site: Site) => void;
   viewMode: "grid" | "list";
 }) {
   const {
@@ -77,9 +128,15 @@ function SiteCard({
 
   return (
     <div ref={setNodeRef} style={style} className="relative group/card">
-      <Card className={`transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(59,130,246,0.15)] cursor-pointer h-full border-slate-200/80 ${viewMode === "list" ? "flex-row items-center" : ""}`}>
+      <Card
+        className={`transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(59,130,246,0.15)] cursor-pointer h-full border-slate-200/80 ${site.pinned
+          ? "ring-2 ring-yellow-400/60 shadow-[0_4px_16px_rgba(234,179,8,0.12)]"
+          : ""
+          } ${viewMode === "list" ? "flex-row items-center" : ""}`}
+      >
         <CardHeader className={viewMode === "list" ? "flex-row items-center w-full" : ""}>
           <div className={`flex items-center gap-3 ${viewMode === "list" ? "flex-1" : ""}`}>
+            {/* Drag handle */}
             <button
               {...attributes}
               {...listeners}
@@ -88,19 +145,54 @@ function SiteCard({
             >
               <GripVertical className="w-4 h-4" />
             </button>
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onRemove(site.id);
-              }}
-              className="absolute top-3 right-3 opacity-0 group-hover/card:opacity-60 hover:!opacity-100 text-slate-400 hover:text-red-500 transition-all p-1 rounded z-10"
-              aria-label="Remove site"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
 
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 border border-slate-200/60 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300 overflow-hidden ml-4">
+            {/* Action Bar */}
+            <div className="absolute top-3 right-3 flex items-center gap-1 transition-all z-10 p-1 rounded-lg border border-slate-200/50 bg-white/90 shadow-sm backdrop-blur-md opacity-0 group-hover/card:opacity-100">
+              {/* Edit button */}
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onEdit(site);
+                }}
+                className="p-1.5 rounded text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors"
+                aria-label="Edit site"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Pin (favourite) button */}
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onTogglePin(site.id);
+                }}
+                className={`p-1.5 rounded transition-colors hover:bg-slate-100 ${site.pinned
+                  ? "text-yellow-400"
+                  : "text-slate-400 hover:text-yellow-500"
+                  }`}
+                aria-label={site.pinned ? "Unpin site" : "Pin site"}
+              >
+                <Star className={`w-3.5 h-3.5 ${site.pinned ? "fill-yellow-400" : ""}`} />
+              </button>
+
+              {/* Remove button */}
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onRemove(site.id);
+                }}
+                className="p-1.5 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                aria-label="Remove site"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Favicon */}
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 border border-slate-200/60 flex items-center justify-center shrink-0 group-hover/card:scale-110 transition-transform duration-300 overflow-hidden ml-4">
               {site.favicon ? (
                 <Image
                   alt={site.title}
@@ -117,9 +209,16 @@ function SiteCard({
                 <Globe className="w-5 h-5 text-slate-400" />
               )}
             </div>
+
             <div className="min-w-0 flex-1">
               <CardTitle className="truncate flex items-center gap-2 flex-wrap">
                 {site.title}
+                {site.pinned && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 text-[10px] font-medium">
+                    <Star className="w-2.5 h-2.5 fill-yellow-500" />
+                    Favourite
+                  </span>
+                )}
                 {site.category && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-medium">
                     <Tag className="w-2.5 h-2.5" />
@@ -132,6 +231,7 @@ function SiteCard({
               </CardDescription>
             </div>
           </div>
+
           {site.link && (
             <CardAction>
               <a
@@ -152,192 +252,9 @@ function SiteCard({
   );
 }
 
-function AddSiteModal({
-  onClose,
-  onAdd,
-  categories,
-}: {
-  onClose: () => void;
-  onAdd: (site: Omit<Site, "id">) => void;
-  categories: string[];
-}) {
-  const [url, setUrl] = useState("");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [actionLabel, setActionLabel] = useState("");
-  const [category, setCategory] = useState("");
-  const [faviconPreview, setFaviconPreview] = useState("");
-  const [faviconError, setFaviconError] = useState(false);
-  const urlInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    urlInputRef.current?.focus();
-  }, []);
 
-  const handleUrlBlur = () => {
-    if (url) {
-      try {
-        const parsed = new URL(url.startsWith("http") ? url : `https://${url}`);
-        const normalized = parsed.href;
-        if (url !== normalized) setUrl(normalized);
-        setFaviconPreview(getFaviconUrl(normalized));
-        setFaviconError(false);
-        if (!title) {
-          setTitle(parsed.hostname.replace(/^www\./, ""));
-        }
-        if (!description) {
-          setDescription(parsed.hostname);
-        }
-      } catch {
-        // invalid URL
-      }
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const normalizedUrl = url.startsWith("http") ? url : `https://${url}`;
-    onAdd({
-      title: title || normalizedUrl,
-      description: description || normalizedUrl,
-      link: normalizedUrl,
-      actionLabel: actionLabel || "Open",
-      favicon: getFaviconUrl(normalizedUrl),
-      category: category || undefined,
-    });
-    onClose();
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-semibold text-slate-900">Add new site</h2>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              URL <span className="text-red-500">*</span>
-            </label>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden bg-slate-50">
-                {faviconPreview && !faviconError ? (
-                  <img
-                    src={faviconPreview}
-                    alt=""
-                    className="w-5 h-5 object-contain"
-                    onError={() => setFaviconError(true)}
-                  />
-                ) : (
-                  <Globe className="w-4 h-4 text-slate-300" />
-                )}
-              </div>
-              <input
-                ref={urlInputRef}
-                type="text"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                onBlur={handleUrlBlur}
-                placeholder="https://example.com"
-                required
-                className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Title <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="My site"
-              required
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Description{" "}
-              <span className="text-slate-400 font-normal">(optional)</span>
-            </label>
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Short description"
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Button label{" "}
-              <span className="text-slate-400 font-normal">(optional)</span>
-            </label>
-            <input
-              type="text"
-              value={actionLabel}
-              onChange={(e) => setActionLabel(e.target.value)}
-              placeholder="Open"
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Category{" "}
-              <span className="text-slate-400 font-normal">(optional)</span>
-            </label>
-            <input
-              type="text"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="Work, Personal, etc."
-              list="categories"
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
-            />
-            <datalist id="categories">
-              {categories.map((cat) => (
-                <option key={cat} value={cat} />
-              ))}
-            </datalist>
-          </div>
-
-          <div className="flex gap-2 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2 text-sm font-medium text-white hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
-            >
-              Add site
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
+// ─── Helper ───────────────────────────────────────────────────────────────────
 function toSiteWithId(s: (typeof initialSites)[0], index: number): Site {
   const link = (s as { link?: string }).link || "";
   return {
@@ -348,19 +265,24 @@ function toSiteWithId(s: (typeof initialSites)[0], index: number): Site {
     actionLabel: (s as { actionLabel?: string }).actionLabel,
     favicon: link ? getFaviconUrl(link) : "",
     category: (s as { category?: string }).category,
+    pinned: false,
   };
 }
 
+// ─── Main Component ───────────────────────────────────────────────────────────
 export function SitesGrid() {
   const [sites, setSites] = useState<Site[]>(() =>
     initialSites.map(toSiteWithId)
   );
   const [showModal, setShowModal] = useState(false);
+  const [editingSite, setEditingSite] = useState<Site | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const importRef = useRef<HTMLInputElement>(null);
 
+  // Persist to localStorage
   useEffect(() => {
     const stored = localStorage.getItem("awedashboard-sites");
     if (stored) {
@@ -378,9 +300,7 @@ export function SitesGrid() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
   function handleDragStart(event: DragStartEvent) {
@@ -399,16 +319,61 @@ export function SitesGrid() {
     }
   }
 
-  function handleAdd(site: Omit<Site, "id">) {
-    const newSite: Site = {
-      ...site,
-      id: `site-${Date.now()}`,
-    };
-    setSites((prev) => [...prev, newSite]);
+  function handleSave(site: Omit<Site, "id">) {
+    if (editingSite) {
+      setSites((prev) =>
+        prev.map((s) => (s.id === editingSite.id ? { ...site, id: s.id, pinned: s.pinned } : s))
+      );
+    } else {
+      setSites((prev) => [...prev, { ...site, id: `site-${Date.now()}` }]);
+    }
+  }
+
+  function handleEdit(site: Site) {
+    setEditingSite(site);
+    setShowModal(true);
   }
 
   function handleRemove(id: string) {
     setSites((prev) => prev.filter((s) => s.id !== id));
+  }
+
+  function handleTogglePin(id: string) {
+    setSites((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, pinned: !s.pinned } : s))
+    );
+  }
+
+  // ── Export ──────────────────────────────────────────────────────────────────
+  function handleExport() {
+    const json = JSON.stringify(sites, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "awedashboard-sites.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Import ──────────────────────────────────────────────────────────────────
+  function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target?.result as string) as Site[];
+        if (Array.isArray(parsed)) {
+          setSites(parsed);
+        }
+      } catch {
+        alert("Invalid JSON file.");
+      }
+    };
+    reader.readAsText(file);
+    // reset so the same file can be re-imported
+    e.target.value = "";
   }
 
   const activeSite = sites.find((s) => s.id === activeId);
@@ -426,63 +391,108 @@ export function SitesGrid() {
     return matchesSearch && matchesCategory;
   });
 
+  // Pinned sites go first, then the rest (order within each group is preserved)
+  const sortedFilteredSites = [
+    ...filteredSites.filter((s) => s.pinned),
+    ...filteredSites.filter((s) => !s.pinned),
+  ];
+
   return (
     <>
       {showModal && (
-        <AddSiteModal
-          onClose={() => setShowModal(false)}
-          onAdd={handleAdd}
+        <SiteFormModal
+          onClose={() => {
+            setShowModal(false);
+            setEditingSite(null);
+          }}
+          onSave={handleSave}
           categories={categories}
+          initialData={editingSite}
         />
       )}
 
+      {/* Hidden file input for import */}
+      <input
+        ref={importRef}
+        type="file"
+        accept="application/json"
+        className="hidden"
+        onChange={handleImport}
+      />
+
+      {/* Stats bar */}
+      <StatsBar sites={sites} />
+
+      {/* Toolbar */}
       <div className="mb-6 space-y-4">
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+          {/* Search */}
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search sites..."
+              placeholder="Search sites…"
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white/80 backdrop-blur-sm text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all shadow-sm"
             />
           </div>
+
+          {/* View mode + Export/Import */}
           <div className="flex gap-2">
             <button
               onClick={() => setViewMode("grid")}
-              className={`p-2.5 rounded-xl transition-all ${
-                viewMode === "grid"
-                  ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md"
-                  : "bg-white/80 text-slate-600 hover:bg-slate-100 border border-slate-200"
-              }`}
+              className={`p-2.5 rounded-xl transition-all ${viewMode === "grid"
+                ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md"
+                : "bg-white/80 text-slate-600 hover:bg-slate-100 border border-slate-200"
+                }`}
               aria-label="Grid view"
             >
               <Grid3x3 className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode("list")}
-              className={`p-2.5 rounded-xl transition-all ${
-                viewMode === "list"
-                  ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md"
-                  : "bg-white/80 text-slate-600 hover:bg-slate-100 border border-slate-200"
-              }`}
+              className={`p-2.5 rounded-xl transition-all ${viewMode === "list"
+                ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md"
+                : "bg-white/80 text-slate-600 hover:bg-slate-100 border border-slate-200"
+                }`}
               aria-label="List view"
             >
               <List className="w-4 h-4" />
             </button>
+
+            {/* Divider */}
+            <div className="w-px bg-slate-200 mx-1 self-stretch" />
+
+            {/* Export */}
+            <button
+              onClick={handleExport}
+              className="p-2.5 rounded-xl bg-white/80 text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all"
+              title="Export sites as JSON"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+
+            {/* Import */}
+            <button
+              onClick={() => importRef.current?.click()}
+              className="p-2.5 rounded-xl bg-white/80 text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all"
+              title="Import sites from JSON"
+            >
+              <Upload className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
+        {/* Category filters */}
         {categories.length > 0 && (
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setSelectedCategory(null)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                !selectedCategory
-                  ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md"
-                  : "bg-white/80 text-slate-600 hover:bg-slate-100 border border-slate-200"
-              }`}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${!selectedCategory
+                ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md"
+                : "bg-white/80 text-slate-600 hover:bg-slate-100 border border-slate-200"
+                }`}
             >
               All
             </button>
@@ -490,11 +500,10 @@ export function SitesGrid() {
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all inline-flex items-center gap-1.5 ${
-                  selectedCategory === cat
-                    ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md"
-                    : "bg-white/80 text-slate-600 hover:bg-slate-100 border border-slate-200"
-                }`}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all inline-flex items-center gap-1.5 ${selectedCategory === cat
+                  ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md"
+                  : "bg-white/80 text-slate-600 hover:bg-slate-100 border border-slate-200"
+                  }`}
               >
                 <Tag className="w-3 h-3" />
                 {cat}
@@ -504,18 +513,25 @@ export function SitesGrid() {
         )}
       </div>
 
+      {/* Grid / List */}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <SortableContext items={filteredSites.map((s) => s.id)} strategy={rectSortingStrategy}>
-          <div className={
-            viewMode === "grid"
-              ? "grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
-              : "flex flex-col gap-3"
-          }>
+        <SortableContext
+          items={sortedFilteredSites.map((s) => s.id)}
+          strategy={rectSortingStrategy}
+        >
+          <div
+            className={
+              viewMode === "grid"
+                ? "grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
+                : "flex flex-col gap-3"
+            }
+          >
+            {/* Add new site button */}
             <button
               onClick={() => setShowModal(true)}
               className="group text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(59,130,246,0.12)] rounded-xl border-dashed border-2 border-slate-200 hover:border-blue-400 bg-white/60 hover:bg-white/80 p-5 flex items-center gap-3"
@@ -529,19 +545,26 @@ export function SitesGrid() {
               </div>
             </button>
 
-            {filteredSites.map((site) => (
-              <SiteCard key={site.id} site={site} onRemove={handleRemove} viewMode={viewMode} />
+            {sortedFilteredSites.map((site) => (
+              <SiteCard
+                key={site.id}
+                site={site}
+                onRemove={handleRemove}
+                onTogglePin={handleTogglePin}
+                onEdit={handleEdit}
+                viewMode={viewMode}
+              />
             ))}
           </div>
         </SortableContext>
 
         <DragOverlay>
           {activeSite && (
-            <div className="opacity-90 rotate-1 scale-105 shadow-2xl rounded-xl">
-              <Card className="h-full">
+            <div className="scale-105 shadow-2xl rounded-xl ring-2 ring-blue-500/50 bg-white">
+              <Card className="h-full border-slate-200/80">
                 <CardHeader>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 border border-slate-200/60 flex items-center justify-center shrink-0 overflow-hidden">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 border border-slate-200/60 flex items-center justify-center shrink-0 overflow-hidden ml-4">
                       {activeSite.favicon ? (
                         <img
                           alt={activeSite.title}
@@ -553,12 +576,34 @@ export function SitesGrid() {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <CardTitle className="truncate">{activeSite.title}</CardTitle>
+                      <CardTitle className="truncate flex items-center gap-2 flex-wrap">
+                        {activeSite.title}
+                        {activeSite.pinned && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 text-[10px] font-medium">
+                            <Star className="w-2.5 h-2.5 fill-yellow-500" />
+                            Favourite
+                          </span>
+                        )}
+                        {activeSite.category && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-medium">
+                            <Tag className="w-2.5 h-2.5" />
+                            {activeSite.category}
+                          </span>
+                        )}
+                      </CardTitle>
                       <CardDescription className="truncate">
                         {activeSite.description}
                       </CardDescription>
                     </div>
                   </div>
+                  {activeSite.link && (
+                    <CardAction>
+                      <div className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-3 py-1 text-xs font-semibold text-white shadow-md">
+                        <ExternalLink className="w-3 h-3" />
+                        {activeSite.actionLabel || "Open"}
+                      </div>
+                    </CardAction>
+                  )}
                 </CardHeader>
               </Card>
             </div>
